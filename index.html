@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>G10 macro dashboard</title>
+<meta name="description" content="Daily-updated ratings, rates, inflation, jobs, growth, positioning and the week ahead for the ten G10 currencies.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap">
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #EEF1F5; --surface: #FFFFFF; --surface2: #E5E9F0; --ink: #111C2A; --muted: #5A6878;
+    --line: #D3D9E2; --accent: #2B4FE0; --accent2: #7C3AED; --good: #1E8F5A; --warn: #B7700B; --bad: #C0392B;
+    --font-body: "Instrument Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-head: "Bricolage Grotesque", "Instrument Sans", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0D131B; --surface: #151D27; --surface2: #1D2733; --ink: #E7ECF2; --muted: #93A0B0;
+      --line: #26323F; --accent: #86A2FF; --accent2: #B79CFF; --good: #4CC58A; --warn: #E3A33A; --bad: #EF6B5C;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0D131B; --surface: #151D27; --surface2: #1D2733; --ink: #E7ECF2; --muted: #93A0B0;
+    --line: #26323F; --accent: #86A2FF; --accent2: #B79CFF; --good: #4CC58A; --warn: #E3A33A; --bad: #EF6B5C;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 400 15px/1.5 var(--font-body); -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 1.25rem 4rem; }
+  h1, h2, h3 { font-family: var(--font-head); letter-spacing: -.015em; margin: 0; }
+  h2 { font-size: 1.45rem; font-weight: 700; }
+  h3 { font-size: 1.05rem; font-weight: 600; }
+  p { margin: 0; }
+  .num { font-variant-numeric: tabular-nums; }
+  .muted { color: var(--muted); }
+  section { padding-top: 2.6rem; }
+  .sec-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .4rem 1rem; margin-bottom: 1rem; }
+  .sec-head p { color: var(--muted); font-size: .9rem; max-width: 70ch; }
+
+  /* top bar */
+  .top { padding: 1.6rem 0 1rem; border-bottom: 1px solid var(--line); position: relative; }
+  .top::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 0 0 3px 3px; }
+  .top-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 1rem; }
+  h1 { font-size: clamp(1.7rem, 4vw, 2.5rem); font-weight: 700; }
+  .stamp { text-align: right; font-size: .85rem; color: var(--muted); }
+  .chip { display: inline-block; padding: .12rem .55rem; border-radius: 99px; font-size: .78rem; font-weight: 600; border: 1px solid var(--line); background: var(--surface); }
+  .chip.good { color: var(--good); border-color: var(--good); }
+  .chip.warn { color: var(--warn); border-color: var(--warn); }
+  .chip.bad { color: var(--bad); border-color: var(--bad); }
+  nav { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: 1rem; }
+  nav a { color: var(--ink); text-decoration: none; padding: .3rem .75rem; border: 1px solid var(--line); border-radius: 99px; font-size: .85rem; background: var(--surface); }
+  nav a:hover, nav a:focus-visible { border-color: var(--accent); color: var(--accent); outline: none; }
+
+  /* gates + market */
+  .gates { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: .75rem; }
+  .gate { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--muted); border-radius: 8px; padding: .8rem .95rem; font-size: .88rem; }
+  .gate b { display: block; font-size: .98rem; margin-bottom: .2rem; }
+  .gate span { color: var(--muted); }
+  .gate[data-tone="good"] { border-left-color: var(--good); }
+  .gate[data-tone="warn"] { border-left-color: var(--warn); }
+  .gate[data-tone="bad"] { border-left-color: var(--bad); }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .6rem; margin-top: .9rem; }
+  .tile { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: .65rem .8rem; transition: transform .15s ease, box-shadow .15s ease; }
+  .tile:hover { transform: translateY(-2px); box-shadow: 0 6px 18px -10px rgba(0,0,0,.35); }
+  .tile .l { font-size: .78rem; color: var(--muted); }
+  .tile .v { font-family: var(--font-head); font-size: 1.3rem; font-weight: 600; }
+  .tile .s { font-size: .76rem; color: var(--muted); }
+  .tile .v.todo { font-size: .95rem; color: var(--muted); font-style: italic; font-weight: 500; }
+
+  /* ladder */
+  .ladder { display: flex; align-items: flex-end; gap: .5rem; height: 230px; padding: 1.4rem .5rem 0; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; position: relative; }
+  .ladder::before { content: ""; position: absolute; left: 0; right: 0; bottom: calc(2.2rem + 5 * 16px); border-top: 1px dashed var(--line); }
+  .col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; min-width: 0; }
+  .col .n { font-family: var(--font-head); font-weight: 700; font-size: 1.05rem; margin-bottom: .2rem; }
+  .col .bar { width: 100%; max-width: 56px; border-radius: 6px 6px 0 0; transition: height .5s cubic-bezier(.2,.8,.2,1); }
+  .col .c { height: 2.2rem; display: flex; align-items: center; font-weight: 700; font-size: .9rem; }
+  .ladder-note { font-size: .78rem; color: var(--muted); margin-top: .4rem; }
+
+  /* rating rows */
+  .rows { margin-top: 1.1rem; }
+  .rhead, .rrow { display: grid; grid-template-columns: 3.4rem 5rem minmax(100px, 1fr) 13rem 4.2rem; gap: .9rem; align-items: center; }
+  .rhead { padding: 0 1rem .35rem; font-size: .78rem; color: var(--muted); }
+  .ritem { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; margin-bottom: .5rem; }
+  .rrow { padding: .7rem 1rem .3rem; }
+  .code { font: 700 1.05rem var(--font-head); background: none; border: 0; padding: 0; color: var(--ink); text-align: left; cursor: pointer; }
+  .code:focus-visible, select:focus-visible, button:focus-visible, summary:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .big { font: 700 1.8rem/1 var(--font-head); }
+  .big small { font: 500 .8rem var(--font-body); color: var(--muted); }
+  .track { height: 10px; border-radius: 5px; background: var(--surface2); overflow: hidden; }
+  .fill { height: 100%; border-radius: 5px; transition: width .5s cubic-bezier(.2,.8,.2,1); }
+  select { width: 100%; padding: .4rem .5rem; font: inherit; font-size: .85rem; color: var(--ink); background: var(--surface2); border: 1px solid var(--line); border-radius: 6px; }
+  .final { text-align: right; font: 700 1.3rem var(--font-head); }
+  .cotline { padding: 0 1rem .7rem; font-size: .8rem; color: var(--muted); }
+  .why { padding: .6rem 1rem .85rem; border-top: 1px solid var(--line); font-size: .87rem; color: var(--muted); }
+  .why[hidden] { display: none; }
+
+  /* matrix + tables */
+  .scroll { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+  table { border-collapse: collapse; width: 100%; font-size: .84rem; }
+  th, td { padding: .55rem .7rem; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+  th { font-weight: 600; color: var(--muted); font-size: .78rem; white-space: nowrap; background: var(--surface); }
+  tr:last-child td { border-bottom: 0; }
+  tbody tr:hover td { background: var(--surface2); }
+  td.k { font: 700 .98rem var(--font-head); white-space: nowrap; }
+  .mx td, .mx th { text-align: center; padding: .45rem .4rem; }
+  .mx td:first-child, .mx th:first-child { text-align: left; padding-left: .8rem; }
+  .cell { display: block; border-radius: 4px; padding: .15rem 0; font-weight: 600; }
+  .sub { display: block; color: var(--muted); font-size: .76rem; margin-top: .1rem; }
+  .todo { color: var(--muted); font-style: italic; }
+  .stance { font-weight: 600; }
+  .stance.hawk { color: var(--good); }
+  .stance.neutral { color: var(--muted); }
+  .stance.dove { color: var(--bad); }
+  details { margin-top: .9rem; }
+  summary { cursor: pointer; font-weight: 600; font-size: .92rem; }
+  .formula { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: .8rem 1rem; margin-top: .6rem; font-size: .86rem; }
+  .formula code { background: var(--surface2); padding: .05rem .35rem; border-radius: 4px; font-size: .82rem; }
+
+  /* week */
+  .days { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: .75rem; }
+  .day { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: .85rem .95rem; }
+  .day h3 { margin-bottom: .5rem; }
+  .ev { display: grid; grid-template-columns: .7rem 3rem 1fr; gap: .5rem; padding: .35rem 0; border-top: 1px solid var(--line); font-size: .85rem; }
+  .ev:first-of-type { border-top: 0; }
+  .dot { width: .55rem; height: .55rem; border-radius: 50%; margin-top: .4rem; background: var(--muted); }
+  .dot.high { background: var(--bad); } .dot.med { background: var(--warn); }
+  .ev .cur { font-weight: 700; }
+  .ev .note { display: block; color: var(--muted); font-size: .78rem; }
+  .legend { display: flex; gap: 1rem; font-size: .78rem; color: var(--muted); margin-top: .6rem; }
+  .legend i { display: inline-block; width: .55rem; height: .55rem; border-radius: 50%; margin-right: .3rem; }
+
+  textarea { width: 100%; min-height: 9rem; padding: .7rem; font: inherit; font-size: .84rem; color: var(--ink); background: var(--surface2); border: 1px solid var(--line); border-radius: 8px; resize: vertical; }
+  .btn { margin-top: .5rem; padding: .45rem .9rem; font: 600 .85rem var(--font-body); color: #fff; background: var(--accent); border: 0; border-radius: 6px; cursor: pointer; }
+  footer { margin-top: 2.5rem; font-size: .8rem; color: var(--muted); max-width: 80ch; }
+  footer a { color: var(--accent); }
+
+  .loading, .error { padding: 3rem 1rem; text-align: center; color: var(--muted); }
+  .error { color: var(--bad); }
+
+  @media (max-width: 760px) {
+    .rhead { display: none; }
+    .rrow { grid-template-columns: 3.2rem 1fr 4rem; grid-template-areas: "code big final" "bar bar bar" "sel sel sel"; row-gap: .55rem; }
+    .rrow .code { grid-area: code; } .rrow .big { grid-area: big; } .rrow .track { grid-area: bar; }
+    .rrow .selw { grid-area: sel; } .rrow .final { grid-area: final; }
+    .stamp { text-align: left; }
+    .ladder { height: 200px; gap: .3rem; }
+  }
+  @media (prefers-reduced-motion: reduce) { .col .bar, .fill { transition: none; } html { scroll-behavior: auto; } }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="top-row">
+      <div>
+        <h1>G10 macro dashboard</h1>
+        <p class="muted" style="margin-top:.3rem">Ratings, rates, inflation, jobs, growth, positioning and the week ahead for the ten G10 currencies.</p>
+      </div>
+      <div class="stamp">
+        <div id="asof">Loading&hellip;</div>
+        <div style="margin-top:.3rem"><span id="fresh" class="chip"></span></div>
+      </div>
+    </div>
+    <nav aria-label="Sections">
+      <a href="#gates">Market gates</a>
+      <a href="#strength">Currency ratings</a>
+      <a href="#macro">G10 macro table</a>
+      <a href="#week">Week ahead</a>
+      <a href="#method">Method and daily update</a>
+    </nav>
+  </header>
+
+  <div id="app">
+    <div class="loading">Loading today's data&hellip;</div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function isoDate(s) { var p = s.split("-"); return new Date(+p[0], +p[1] - 1, +p[2], 12, 0, 0); }
+  var now = new Date();
+  var todayNoon = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0);
+  function daysFromToday(iso) { return Math.round((isoDate(iso) - todayNoon) / 86400000); }
+  function fmtDate(d) { return d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "long", year: "numeric" }); }
+  function fmt(n) { return (Math.round(n * 10) / 10).toFixed(1); }
+  function k(n) { return (n < 0 ? "-" : "+") + (Math.abs(n) / 1000).toFixed(1) + "k"; }
+  function wk(n) { return (n >= 0 ? "up " : "down ") + (Math.abs(n) / 1000).toFixed(1) + "k"; }
+  function hue(s) { return Math.round(Math.max(0, Math.min(10, s)) * 12); }
+  function bg(s) { return "hsl(" + hue(s) + " 55% 45%)"; }
+
+  function buildPage(DATA) {
+    var META = DATA.meta, MARKET = DATA.market, GATE_TEXT = DATA.gates, COMPONENTS = DATA.components,
+        CUR = DATA.currencies, MACRO = DATA.macro, ORDER = DATA.order, WEEK = DATA.week, LATER = DATA.later;
+
+    function rawScore(c) {
+      var s = 5;
+      COMPONENTS.forEach(function (m) { s += m.w * (c.v[m.k] || 0); });
+      return Math.max(0, Math.min(10, s));
+    }
+    function score(c) { return Math.round(rawScore(c) * 2) / 2; }
+    var RANKED = CUR.slice().sort(function (a, b) { return rawScore(b) - rawScore(a); });
+
+    // header
+    var asOfDate = isoDate(META.asOf);
+    $("asof").textContent = "Data as of " + fmtDate(asOfDate);
+    var age = Math.round((todayNoon - asOfDate) / 86400000);
+    var fresh = $("fresh");
+    if (age <= 0) { fresh.textContent = "Updated today"; fresh.className = "chip good"; }
+    else if (age === 1) { fresh.textContent = "1 day old"; fresh.className = "chip good"; }
+    else { fresh.textContent = age + " days old, update needed"; fresh.className = "chip " + (age >= 4 ? "bad" : "warn"); }
+
+    var app = $("app");
+    app.innerHTML = "";
+
+    // ---- gates section
+    var secGates = el("section"); secGates.id = "gates"; secGates.setAttribute("aria-labelledby", "gates-h");
+    var gh = el("div", "sec-head"); gh.appendChild(el("h2", null, "Market gates")); var ghp = el("p", null, "Check these first. They set the backdrop for every currency below."); gh.appendChild(ghp);
+    secGates.appendChild(gh);
+    var gl = el("div", "gates"); gl.id = "gate-list";
+    function gate(tone, title, text) { var g = el("div", "gate"); g.setAttribute("data-tone", tone); g.appendChild(el("b", null, title)); g.appendChild(el("span", null, text)); gl.appendChild(g); }
+    gate(GATE_TEXT.risk.tone, GATE_TEXT.risk.title, GATE_TEXT.risk.text);
+    gate(GATE_TEXT.geo.tone, GATE_TEXT.geo.title, GATE_TEXT.geo.text);
+    var soon = [];
+    ORDER.forEach(function (c) {
+      var n = MACRO[c].next;
+      if (n.iso && n.confirmed) { var d = daysFromToday(n.iso); if (d >= 2 && d <= 5) soon.push(c + " in " + d + " days (" + n.label + ")"); }
+    });
+    if (soon.length) gate("warn", "Central bank in 2 to 5 days: yes", soon.join(", ") + ". Expect thinner, jumpier trade into the decision.");
+    else gate("good", "Central bank in 2 to 5 days: no", "No confirmed G10 decision falls in the next 2 to 5 days.");
+    var dow = now.getDay();
+    gate("warn", "Thin session: check", (dow === 0 || dow === 6 ? "Weekend, markets closed. " : "") + GATE_TEXT.thin);
+    secGates.appendChild(gl);
+    var tl = el("div", "tiles"); tl.id = "tiles";
+    MARKET.forEach(function (m) {
+      var t = el("div", "tile");
+      t.appendChild(el("div", "l", m.l));
+      t.appendChild(el("div", "v num" + (m.todo ? " todo" : ""), m.v));
+      t.appendChild(el("div", "s", m.s));
+      tl.appendChild(t);
+    });
+    secGates.appendChild(tl);
+    app.appendChild(secGates);
+
+    // ---- strength section
+    var secStrength = el("section"); secStrength.id = "strength"; secStrength.setAttribute("aria-labelledby", "strength-h");
+    var sh = el("div", "sec-head"); sh.appendChild(el("h2", null, "Currency ratings")); sh.appendChild(el("p", null, "Fundamental score out of 10, computed from the gates and fundamentals. Add your own price and volume check to get the final number."));
+    secStrength.appendChild(sh);
+    var lad = el("div", "ladder"); lad.id = "ladder"; lad.setAttribute("role", "img"); lad.setAttribute("aria-label", "Bar chart of fundamental scores for the ten G10 currencies, strongest on the left");
+    RANKED.forEach(function (c) {
+      var s = score(c);
+      var col = el("div", "col");
+      col.title = c.c + ": " + fmt(s) + " out of 10";
+      col.appendChild(el("div", "n num", fmt(s)));
+      var bar = el("div", "bar"); bar.style.height = (s / 10 * 150) + "px"; bar.style.background = bg(s);
+      col.appendChild(bar);
+      col.appendChild(el("div", "c", c.c));
+      lad.appendChild(col);
+    });
+    secStrength.appendChild(lad);
+    secStrength.appendChild(el("p", "ladder-note", "Dashed line marks 5, the neutral point. Strongest on the left."));
+
+    var rowsWrap = el("div", "rows");
+    var rhead = el("div", "rhead"); rhead.setAttribute("aria-hidden", "true");
+    ["Currency", "Score", "Strength", "Your confirmation", "Final"].forEach(function (t, i) {
+      var s = el("span", null, t); if (i === 4) s.style.textAlign = "right"; rhead.appendChild(s);
+    });
+    rowsWrap.appendChild(rhead);
+    var rows = el("div"); rows.id = "rating-rows"; rowsWrap.appendChild(rows);
+    secStrength.appendChild(rowsWrap);
+
+    // confirmation persistence (per-viewer convenience, reset each day)
+    var KEY = "g10dash.confirm.v1";
+    var dayKey = now.getFullYear() + "-" + (now.getMonth() + 1) + "-" + now.getDate();
+    var saved = {};
+    try { var raw = localStorage.getItem(KEY); if (raw) { var o = JSON.parse(raw); if (o && o.day === dayKey && o.sel) saved = o.sel; } } catch (e) { saved = {}; }
+    function persist() { try { localStorage.setItem(KEY, JSON.stringify({ day: dayKey, sel: saved })); } catch (e) { /* storage unavailable */ } }
+
+    var CONFIRM = [
+      { v: "", t: "Not checked yet" },
+      { v: "1", t: "Price and volume agree (+1)" },
+      { v: "0", t: "Mixed (0)" },
+      { v: "-1", t: "Price contradicts (-1)" }
+    ];
+    function cotText(c) {
+      if (!c) return "COT: no CFTC line for this currency.";
+      return "COT (" + META.cotDate + ", stale): leveraged funds net " + k(c.lev) + " (" + wk(c.levChg) + "), asset managers net " + k(c.am) + " (" + wk(c.amChg) + ").";
+    }
+    RANKED.forEach(function (c, i) {
+      var s = score(c);
+      var item = el("div", "ritem");
+      var row = el("div", "rrow");
+      var code = el("button", "code", c.c); code.type = "button"; code.setAttribute("aria-expanded", "false"); code.setAttribute("aria-controls", "why-" + i);
+      var big = el("div", "big num"); big.appendChild(document.createTextNode(fmt(s))); big.appendChild(el("small", null, "/10"));
+      var track = el("div", "track"); var fill = el("div", "fill"); fill.style.width = (s * 10) + "%"; fill.style.background = bg(s); track.appendChild(fill);
+      var selw = el("div", "selw");
+      var lab = el("label", "sr", c.c + " confirmation"); lab.setAttribute("for", "sel-" + i);
+      var sel = el("select"); sel.id = "sel-" + i;
+      CONFIRM.forEach(function (o) { var op = el("option", null, o.t); op.value = o.v; sel.appendChild(op); });
+      selw.appendChild(lab); selw.appendChild(sel);
+      var fin = el("div", "final num", "-"); fin.setAttribute("aria-live", "polite");
+      function update() {
+        if (sel.value === "") { fin.textContent = "-"; delete saved[c.c]; }
+        else { fin.textContent = fmt(Math.max(0, Math.min(10, s + Number(sel.value)))); saved[c.c] = sel.value; }
+      }
+      if (saved[c.c] !== undefined) { sel.value = saved[c.c]; update(); }
+      sel.addEventListener("change", function () { update(); persist(); });
+      row.appendChild(code); row.appendChild(big); row.appendChild(track); row.appendChild(selw); row.appendChild(fin);
+      var cot = el("p", "cotline", cotText(c.cot));
+      var why = el("p", "why", c.why); why.id = "why-" + i; why.hidden = true;
+      code.addEventListener("click", function () { var open = why.hidden; why.hidden = !open; code.setAttribute("aria-expanded", String(open)); });
+      item.appendChild(row); item.appendChild(cot); item.appendChild(why);
+      rows.appendChild(item);
+    });
+
+    var details = el("details");
+    var summary = el("summary", null, "Show how each score was built");
+    details.appendChild(summary);
+    var scrollw = el("div", "scroll"); scrollw.style.marginTop = ".6rem";
+    var mx = el("table", "mx"); mx.id = "matrix";
+    var thead = el("thead"); var hr = el("tr"); hr.appendChild(el("th", null, "Currency"));
+    COMPONENTS.forEach(function (m) { var th = el("th"); th.appendChild(document.createTextNode(m.label)); th.appendChild(el("span", "sub", "weight " + m.w)); hr.appendChild(th); });
+    hr.appendChild(el("th", null, "Raw")); hr.appendChild(el("th", null, "Score"));
+    thead.appendChild(hr); mx.appendChild(thead);
+    var tb = el("tbody");
+    RANKED.forEach(function (c) {
+      var tr = el("tr"); tr.appendChild(el("td", "k", c.c));
+      COMPONENTS.forEach(function (m) {
+        var v = c.v[m.k] || 0; var td = el("td"); var cell = el("span", "cell num", (v > 0 ? "+" : "") + v);
+        if (v !== 0) { var a = Math.abs(v) / 2 * 0.5; cell.style.background = v > 0 ? "hsla(150,55%,42%," + a + ")" : "hsla(5,65%,50%," + a + ")"; }
+        td.appendChild(cell); tr.appendChild(td);
+      });
+      tr.appendChild(el("td", "num", fmt(rawScore(c)))); tr.appendChild(el("td", "num k", fmt(score(c))));
+      tb.appendChild(tr);
+    });
+    mx.appendChild(tb);
+    scrollw.appendChild(mx); details.appendChild(scrollw);
+    details.appendChild(el("p", "ladder-note", "Each cell is scored from -2 to +2. Green pushes the score up, red pushes it down. The weight sits under each column name."));
+    secStrength.appendChild(details);
+    app.appendChild(secStrength);
+
+    // ---- macro table section
+    var secMacro = el("section"); secMacro.id = "macro"; secMacro.setAttribute("aria-labelledby", "macro-h");
+    var mh2 = el("div", "sec-head"); mh2.appendChild(el("h2", null, "G10 macro table")); mh2.appendChild(el("p", null, "The data to review every week. Scroll sideways on a small screen."));
+    secMacro.appendChild(mh2);
+    var mscroll = el("div", "scroll");
+    var mt = el("table"); mt.id = "macro-table";
+    var mheadEl = el("thead"); var mhr = el("tr");
+    ["Currency", "Policy rate", "Last move", "Stance", "Next meeting", "Inflation", "Jobs", "Growth", "Energy and other link"].forEach(function (h) { mhr.appendChild(el("th", null, h)); });
+    mheadEl.appendChild(mhr); mt.appendChild(mheadEl);
+    var mb = el("tbody");
+    function cellWith(main, note) {
+      var td = el("td");
+      var m = el("span", /^update/i.test(main) ? "todo" : null, main); td.appendChild(m);
+      if (note) td.appendChild(el("span", "sub", note));
+      return td;
+    }
+    ORDER.forEach(function (c) {
+      var d = MACRO[c]; var tr = el("tr");
+      tr.appendChild(el("td", "k", c));
+      tr.appendChild(el("td", "num", d.rate));
+      tr.appendChild(el("td", null, d.last));
+      var st = el("td"); st.appendChild(el("span", "stance " + d.tone, d.stance)); tr.appendChild(st);
+      var nx = el("td"); nx.appendChild(el("span", "num", (d.next.confirmed ? "" : "~") + d.next.label));
+      if (d.next.iso && d.next.confirmed) {
+        var dd = daysFromToday(d.next.iso);
+        nx.appendChild(el("span", "sub", dd > 0 ? "in " + dd + " days" : dd === 0 ? "today" : "passed, update"));
+      }
+      tr.appendChild(nx);
+      tr.appendChild(cellWith(d.cpi, d.cpiN)); tr.appendChild(cellWith(d.jobs, d.jobsN)); tr.appendChild(cellWith(d.gdp, d.gdpN));
+      tr.appendChild(el("td", null, d.link));
+      mb.appendChild(tr);
+    });
+    mt.appendChild(mb);
+    mscroll.appendChild(mt); secMacro.appendChild(mscroll);
+    secMacro.appendChild(el("p", "ladder-note", 'Rows marked "update" were not checked yet. Meeting dates marked with a tilde are not confirmed against the bank\'s calendar.'));
+    app.appendChild(secMacro);
+
+    // ---- week section
+    var secWeek = el("section"); secWeek.id = "week"; secWeek.setAttribute("aria-labelledby", "week-h");
+    var wh = el("div", "sec-head"); wh.appendChild(el("h2", null, "Week ahead")); wh.appendChild(el("p", null, "This week's calendar, then the dates after that worth knowing."));
+    secWeek.appendChild(wh);
+    var dl = el("div", "days"); dl.id = "days";
+    WEEK.forEach(function (d) {
+      var box = el("div", "day"); box.appendChild(el("h3", null, d.day));
+      d.ev.forEach(function (e) {
+        var r = el("div", "ev"); r.appendChild(el("span", "dot " + e.i));
+        r.appendChild(el("span", "cur", e.cur));
+        var t = el("div"); t.appendChild(document.createTextNode(e.n)); if (e.note) t.appendChild(el("span", "note", e.note));
+        r.appendChild(t); box.appendChild(r);
+      });
+      dl.appendChild(box);
+    });
+    secWeek.appendChild(dl);
+    var legend = el("div", "legend");
+    legend.innerHTML = '<span><i style="background:var(--bad)"></i>High impact</span><span><i style="background:var(--warn)"></i>Medium</span><span><i style="background:var(--muted)"></i>Low</span>';
+    secWeek.appendChild(legend);
+    var laterBox = el("div", "day"); laterBox.style.marginTop = ".75rem"; laterBox.appendChild(el("h3", null, "After this week"));
+    var ll = el("div"); ll.id = "later";
+    LATER.forEach(function (e) {
+      var r = el("div", "ev"); r.style.gridTemplateColumns = "4.2rem 5rem 1fr";
+      r.appendChild(el("span", "cur num", e.d)); r.appendChild(el("span", "cur", e.cur));
+      var t = el("div"); t.appendChild(document.createTextNode(e.n)); if (e.note) t.appendChild(el("span", "note", e.note)); r.appendChild(t);
+      ll.appendChild(r);
+    });
+    laterBox.appendChild(ll); secWeek.appendChild(laterBox);
+    app.appendChild(secWeek);
+
+    // ---- method section
+    var secMethod = el("section"); secMethod.id = "method"; secMethod.setAttribute("aria-labelledby", "method-h");
+    var meh = el("div", "sec-head"); meh.appendChild(el("h2", null, "Method and daily update"));
+    secMethod.appendChild(meh);
+    var f1 = el("div", "formula");
+    f1.innerHTML = "<b>The rating rule.</b> Nine components, each scored from -2 to +2 in half steps. The fundamental score is " +
+      "<code>5 + sum(weight x component)</code>, limited to 0 to 10 and rounded to the nearest 0.5. " +
+      "The final score is the fundamental score plus your confirmation: +1 if live price and volume agree, 0 if mixed, -1 if they contradict.";
+    var weightsDiv = el("div", "muted"); weightsDiv.style.marginTop = ".5rem";
+    weightsDiv.textContent = "Weights: " + COMPONENTS.map(function (m) { return m.label + " " + m.w; }).join(", ") + ".";
+    f1.appendChild(weightsDiv);
+    secMethod.appendChild(f1);
+    var f2 = el("div", "formula");
+    f2.innerHTML = "<b>How this page updates.</b> A GitHub Actions workflow runs on a daily schedule, calls the Claude API with web search enabled to re-check every figure and re-score the nine components, and commits the refreshed <code>data.json</code> back to this repo. Anything it could not verify is marked \u201cupdate.\u201d Your broker price, 4H and Daily structure, and volume are still yours to check, and they decide the final number.";
+    secMethod.appendChild(f2);
+    var details2 = el("details");
+    var summary2 = el("summary", null, "Manual update prompt (fallback)");
+    details2.appendChild(summary2);
+    var pnote = el("p", "muted", "If you ever want to refresh this by hand instead of waiting for the automation, paste this into Claude together with a copy of data.json.");
+    pnote.style.margin = ".4rem 0 .3rem";
+    details2.appendChild(pnote);
+    var ta = el("textarea"); ta.id = "prompt"; ta.readOnly = true;
+    var PROMPT = "Update my G10 macro dashboard's data.json with today's data.\n" +
+      "1. Search for the latest: VIX and S&P 500, dollar index, US 10-year yield, oil, gold, copper, and any geopolitical change.\n" +
+      "2. For each of USD, EUR, GBP, JPY, CHF, CAD, AUD, NZD, NOK, SEK check: central bank stance and last change, policy rate, latest CPI and surprise, latest jobs data and surprise, latest GDP, and the next meeting date.\n" +
+      "3. Get the newest CFTC Traders in Financial Futures numbers (leveraged funds and asset managers, net and weekly change).\n" +
+      "4. Re-score the nine rating components from -2 to +2 for each currency using the same rubric, and explain any component that moved.\n" +
+      "5. Keep the exact same JSON shape as the current data.json.\n" +
+      "6. Set meta.asOf to today's date, mark anything you could not verify as \"update\", and give me the full updated data.json to replace the file with.";
+    ta.value = PROMPT;
+    details2.appendChild(ta);
+    var btn = el("button", "btn", "Copy prompt"); btn.type = "button"; btn.id = "copy";
+    var copied = el("span", "muted", ""); copied.id = "copied"; copied.style.marginLeft = ".5rem";
+    details2.appendChild(btn); details2.appendChild(copied);
+    btn.addEventListener("click", function () {
+      function fallback() { ta.focus(); ta.select(); copied.textContent = "Select and copy with Ctrl+C or Cmd+C"; }
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(PROMPT).then(function () { copied.textContent = "Copied"; }, fallback);
+        } else { fallback(); }
+      } catch (e) { fallback(); }
+    });
+    secMethod.appendChild(details2);
+    app.appendChild(secMethod);
+
+    var foot = el("footer");
+    foot.innerHTML = 'Data sources: central bank releases, national statistics offices, CFTC Traders in Financial Futures report, and market news as of the date shown. Refreshed automatically on a daily schedule by <a href="https://github.com" target="_blank" rel="noopener">GitHub Actions</a> calling the Claude API. This is research support, not investment advice.';
+    app.appendChild(foot);
+  }
+
+  fetch("./data.json", { cache: "no-store" })
+    .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    .then(buildPage)
+    .catch(function (err) {
+      $("app").innerHTML = "";
+      var e = el("div", "error", "Could not load data.json (" + err.message + "). Make sure it sits next to index.html.");
+      $("app").appendChild(e);
+      $("asof").textContent = "No data loaded";
+      $("fresh").textContent = "Error"; $("fresh").className = "chip bad";
+    });
+})();
+</script>
+</body>
+</html>
